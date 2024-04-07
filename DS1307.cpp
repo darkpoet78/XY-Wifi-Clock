@@ -265,18 +265,18 @@ void DS1307_WriteTime()
         }
 
         // adjust format
-        now.tm_wday += 1;
-        now.tm_mon  += 1;
-        now.tm_year -= 100;   // assume year is 2000 or after
+        int wday = now.tm_wday + 1;
+        int mon  = now.tm_mon  + 1;
+        int year = now.tm_year - 100;           // assume year is 2000 or after
 
         // setup data in DS1307 registers
         registers[0] = ((now.tm_sec  / 10) << 4) + (now.tm_sec  % 10);
         registers[1] = ((now.tm_min  / 10) << 4) + (now.tm_min  % 10);
         registers[2] = ((now.tm_hour / 10) << 4) + (now.tm_hour % 10);
-        registers[3] = ((now.tm_wday / 10) << 4) + (now.tm_wday % 10);
+        registers[3] = ((wday        / 10) << 4) + (wday        % 10);
         registers[4] = ((now.tm_mday / 10) << 4) + (now.tm_mday % 10);
-        registers[5] = ((now.tm_mon  / 10) << 4) + (now.tm_mon  % 10);
-        registers[6] = ((now.tm_year / 10) << 4) + (now.tm_year % 10);
+        registers[5] = ((mon         / 10) << 4) + (mon         % 10);
+        registers[6] = ((year        / 10) << 4) + (year        % 10);
         registers[7] = 0x03;
 
         // number of bytes actually sent with a successful ACK

@@ -1307,7 +1307,7 @@ void displayTest()
 {
     Serial.println("displayTest");
 
-    setDisplayBrightness(MAX_BRIGHTNESS, false);
+    setDisplayBrightness(MIN_BRIGHTNESS, false);
 
     for (uint8_t i = 0; i < 3; i++)
     {
@@ -1315,7 +1315,7 @@ void displayTest()
         {
             Disp4Seg.setSegments((j == 0) ? 0x7F : 0xFF, j);
         }
-        last_AM_PM_brightness = MAX_BRIGHTNESS;
+        last_AM_PM_brightness = MIN_BRIGHTNESS;
         analogWrite(AM_PM_LED_pin, AM_PM_values[last_AM_PM_brightness]);
         delay(600);
 
