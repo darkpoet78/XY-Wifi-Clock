@@ -515,6 +515,9 @@ void setup()
         }
     }
 
+    // load settings from SPIFFS
+    loadSettings();
+
     // display "conn" to mean waiting for a network connection
     display.println("conn");
 
@@ -523,6 +526,7 @@ void setup()
     WiFi.setPhyMode(WIFI_PHY_MODE_11G);         // workaround for bug where clock won't reconnect to an Asus router after DHCP lease expires (ESP core problem?)
     wifiManager.setDebugOutput(true);
     wifiManager.setConnectTimeout(WIFI_CONNECT_TIMEOUT);
+    wifiManager.setHostname(config.getDeviceName());
     if (wifiManager.getWiFiIsSaved())
     {
         wifiManager.setEnableConfigPortal(false);
@@ -555,9 +559,6 @@ void setup()
 
     // DS1307 interface setup
     DS1307_Setup(SCL_PIN, SDA_PIN);
-
-    // load settings from SPIFFS
-    loadSettings();
 
     // setup timezone in our config data
     String timezone = config.getTimezone();

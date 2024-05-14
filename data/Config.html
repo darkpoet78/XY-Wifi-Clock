@@ -1,6 +1,12 @@
-<html>
+<!DOCTYPE html>
+
+<html lang="en">
 
 <head>
+
+   <meta charset="utf-8">
+
+   <meta name="viewport" content="width=device-width, initial-scale=1">
 
    <title>XY-Wifi Clock</title>
 
@@ -35,35 +41,35 @@
 <h1>XY-Wifi Clock</h1>
 
 <form>
-   <label>Device Name</label>
+   <label for="deviceName">Device Name</label>
    <input type="text" id="deviceName" name="deviceName" maxlength="15"/><br/><br/>
 
-   <label>Timezone</label>
+   <label for="timezone">Timezone</label>
    <select id="timezone" name="timezone"></select><br/><br/>
 
-   <label>Time Format</label>
+   <label for="displayMode">Time Format</label>
    <select id="displayMode" name="displayMode"></select><br/><br/>
 
-   <label>Date Format</label>
+   <label for="dateFormat">Date Format</label>
    <select id="dateFormat" name="dateFormat"></select><br/><br/>
 
-   <label>Alarm Sound</label>
+   <label for="alarmSound">Alarm Sound</label>
    <select id="alarmSound" name="alarmSound"></select><br/><br/>
 
-   <label>Auto-Brightness Enable</label>
+   <label for="autoBrightness">Auto-Brightness Enable</label>
    <input id="autoBrightness" name="autoBrightness" type="checkbox"><br/><br/>
 
    <br/>
    <h3>Auto-Brightness Settings</h3>
    <div id="day-brightness-section">
-      <label style="width: 95px">Day Start</label>
+      <label for="day-start" style="width: 95px">Day Start</label>
       <select id="day-start" class="hour"></select>
       &emsp;<select class="minute"></select>
       &emsp;<select class="AmPm"></select>
       <span style="padding-left: 40px">Dim <input id="day-start-brightness" class="brightness" type="range" min="1" max="8" value="4"/> Bright</span>
    </div>
    <div id="night-brightness-section">
-      <label style="width: 95px">Night Start</label>
+      <label for="night-start" style="width: 95px">Night Start</label>
       <select id="night-start" class="hour"></select>
       &emsp;<select class="minute"></select>
       &emsp;<select class="AmPm"></select>

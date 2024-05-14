@@ -1,101 +1,174 @@
-// Requires ESPAsyncTCP
-
-//#include <ESPAsyncTCP.h>
 #include <ESP8266WebServer.h>
 
-void startWebServer() {
+
+void startWebServer()
+{
     Serial.println("Starting Web server");
 
-    server.on("/", handleRoot);
-    server.on("/timezones.json", handleGetTimezonesJson);
+    server.on("/",                  handleRoot);
+    server.on("/config",            handleConfigJson);
+    server.on("/timezones.json",    handleGetTimezonesJson);
     server.on("/displayModes.json", handleGetDisplayModesJson);
-    server.on("/dateFormats.json", handleGetDateFormatsJson);
-    server.on("/favicon.ico", handleGetFavicon);
-    server.on("/alarmSounds.json", handleGetAlarmSoundsJson);
-    server.onNotFound(handleNotFound);
-    server.on("/config", handleConfigJson);
+    server.on("/dateFormats.json",  handleGetDateFormatsJson);
+    server.on("/alarmSounds.json",  handleGetAlarmSoundsJson);
+    server.on("/favicon.ico",       handleGetFavicon);
+    server.onNotFound(              handleNotFound);
 
     server.begin();
 }
 
-// Convert the file extension to the MIME type
-String getContentType(String filename) {
-    if (filename.endsWith(".html")) return "text/html";
-    else if (filename.endsWith(".css")) return "text/css";
-    else if (filename.endsWith(".js")) return "application/javascript";
-    else if (filename.endsWith(".ico")) return "image/x-icon";
-    else if (filename.endsWith(".gz")) return "application/x-gzip";
-    else if (filename.endsWith(".json")) return "application/json";
-    return "text/plain";
-}
 
-// Handles reading the file from SPIFFS
-bool handleFileRead(String path) { // send the right file to the client (if it exists)
-    Serial.println("handleFileRead: " + path);
-    if (path.endsWith("/")) path += "index.html";          // If a folder is requested, send the index file
+// return content type and set headers based on type of file to be sent
+String getContentTypeAndHeaders(String filename)
+{
+    String contentType;
 
-    String contentType = getContentType(path);             // Get the MIME type
-    String pathWithGz = path + ".gz";
+    if (filename.endsWith(".ico") )
+    {
+        server.sendHeader("Cache-Control", "max-age=31536000, immutable");
+        server.sendHeader("X-Content-Type-Options", "nosniff");
 
-    if (SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)) { // If the file exists, either as a compressed archive, or normal
-        if (SPIFFS.exists(pathWithGz))                         // If there's a compressed version available
-            path += ".gz";                                         // Use the compressed verion
+        contentType = "image/x-icon";
+    }
+    else
+    {
+        server.sendHeader("Cache-Control", "no-cache");
+        server.sendHeader("X-Content-Type-Options", "nosniff");
 
-        File file = SPIFFS.open(path, "r");                    // Open the file
-        size_t sent = server.streamFile(file, contentType);    // Send it to the client
-        file.close();                                          // Close the file again
-        Serial.println(String("Sent file: ") + path);
-        return true;
+        if (filename.endsWith(".html"))
+        {
+            contentType = "text/html; charset=utf-8";
+        }
+
+        else if (filename.endsWith(".css"))
+        {
+            contentType = "text/css; charset=utf-8";
+        }
+
+        else if (filename.endsWith(".json"))
+        {
+            contentType = "application/json; charset=utf-8";
+        }
+
+        else
+        {
+            contentType = "text/plain; charset = utf-8";
+        }
     }
 
-    Serial.println(String("File Not Found: ") + path);   // If the file doesn't exist, return false
-    return false;
+    return (contentType);
 }
 
-void handleRoot() {
+
+// handles reading a file from SPIFFS
+bool handleFileRead(String path)
+{
+    // assume success
+    bool bReturn = true;
+
+    Serial.println("handleFileRead: " + path);
+
+    // if a folder is requested, send the index file
+    if (path.endsWith("/")) path += "index.html";
+
+    // if the file exists as a compressed archive
+    if (SPIFFS.exists(path + ".gz"))
+    {
+        // use the compressed verion
+        path += ".gz";
+    }
+
+    // if the file exists
+    if (SPIFFS.exists(path))
+    {
+        // get the MIME type and set headers
+        String contentType = getContentTypeAndHeaders(path);
+
+        // send the file to the client
+        File file = SPIFFS.open(path, "r");
+        size_t sent = server.streamFile(file, contentType);
+        file.close();
+
+        Serial.println(String("Sent file: ") + path);
+    }
+    else
+    {
+        Serial.println(String("File Not Found: ") + path);
+        bReturn = false;
+    }
+
+    return (bReturn);
+}
+
+
+void handleRoot()
+{
     Serial.println("Web handleRoot");
 
     // turn off buzzer
     buzzerOn = false;
 
-    if (!handleFileRead("/Config.html")) {
-        server.send(404, "text/plain", "404: Not Found");
+    bool notFoundError = true;
+
+    if (handleFileRead("/Config.html"))
+    {
+        if (handleFileRead("/timezones.json"))
+        {
+            if (handleFileRead("/displayModes.json"))
+            {
+                if (handleFileRead("/dateFormats.json"))
+                {
+                    if (handleFileRead("/alarmSounds.json"))
+                    {
+                        notFoundError = false;
+                    }
+                }
+            }
+        }
     }
 
-    if (!handleFileRead("/timezones.json")) {
-        server.send(404, "text/plain", "404: Not Found");
-    }
-
-    if (!handleFileRead("/displayModes.json")) {
-        server.send(404, "text/plain", "404: Not Found");
-    }
-
-    if (!handleFileRead("/dateFormats.json")) {
-        server.send(404, "text/plain", "404: Not Found");
-    }
-
-    if (!handleFileRead("/alarmSounds.json")) {
-        server.send(404, "text/plain", "404: Not Found");
+    if (notFoundError)
+    {
+        server.send(404, "text/plain; charset = utf-8", "404: Not Found");
     }
 }
 
-void handleConfigJson() {
 
-    if (server.method() == HTTP_GET) {
-        handleGetConfigJson();
-        return;
+void handleConfigJson()
+{
+    switch (server.method())
+    {
+        case HTTP_GET:
+            handleGetConfigJson();
+            break;
+
+        case HTTP_POST:
+            handlePostConfigJson();
+            break;
+
+        default:
+            server.send(405, "text/plain; charset = utf-8", "Method Not Allowed");
+            break;
     }
-
-    if (server.method() == HTTP_POST) {
-        handlePostConfigJson();
-        return;
-    }
-
-    server.send(405, "text/plain", "Method Not Allowed");
-    return;
 }
 
-void handlePostConfigJson() {
+
+void handleGetConfigJson()
+{
+    Serial.println("Web GET handleConfigJson");
+
+    DynamicJsonDocument doc = convertConfigToJson();
+
+    String buffer;
+    serializeJson(doc, buffer);
+    server.sendHeader("Cache-Control", "no-cache");
+    server.sendHeader("X-Content-Type-Options", "nosniff");
+    server.send(200, "application/json; charset=utf-8", buffer);
+}
+
+
+void handlePostConfigJson()
+{
     Serial.println("Web POST handleConfigJson");
 
     String previousDeviceName     = config.getDeviceName();
@@ -123,7 +196,9 @@ void handlePostConfigJson() {
     String alarmSound     = config.getAlarmSound();
     bool   autoBrightness = config.getAutoBrightnessEnable();
 
-    server.send(200, "text/plain");
+    server.sendHeader("Cache-Control", "no-cache");
+    server.sendHeader("X-Content-Type-Options", "nosniff");
+    server.send(200, "text/plain; charset=utf-8");
 
     bool needReset = false;
 
@@ -169,47 +244,49 @@ void handlePostConfigJson() {
     if (needReset)
     {
         Serial.println("Config change(s) will trigger a device restart...");
-        ESP.restart();
         delay(1000);
+        ESP.restart();
     }
 }
 
-void handleGetConfigJson() {
-    Serial.println("Web GET handleConfigJson");
 
-    DynamicJsonDocument doc = convertConfigToJson();
-
-    String buffer;
-    serializeJson(doc, buffer);
-    server.send(200, "application/json", buffer);
-}
-
-void handleGetTimezonesJson() {
+void handleGetTimezonesJson()
+{
     Serial.println("Web GET handleGetTimezonesJson");
     handleFileRead("/timezones.json");
 }
 
-void handleGetDisplayModesJson() {
+
+void handleGetDisplayModesJson()
+{
     Serial.println("Web GET handleGetDisplayModesJson");
     handleFileRead("/displayModes.json");
 }
 
-void handleGetDateFormatsJson() {
+
+void handleGetDateFormatsJson()
+{
     Serial.println("Web GET handleGetDateFormatsJson");
     handleFileRead("/dateFormats.json");
 }
 
-void handleGetFavicon() {
+
+void handleGetFavicon()
+{
     Serial.println("Web GET handleGetFavicon");
     handleFileRead("/favicon.ico");
 }
 
-void handleGetAlarmSoundsJson() {
+
+void handleGetAlarmSoundsJson()
+{
     Serial.println("Web GET handleGetAlarmSoundsJson");
     handleFileRead("/alarmSounds.json");
 }
 
-void handleNotFound() {
+
+void handleNotFound()
+{
     Serial.println("Web handleNotFound");
 
     String message = "Not Found Error\n\n";
