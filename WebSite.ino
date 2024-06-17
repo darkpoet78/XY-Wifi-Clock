@@ -7,6 +7,7 @@ void startWebServer()
 
     server.on("/",                  handleRoot);
     server.on("/config",            handleConfigJson);
+    server.on("/status",            handleStatusJson);
     server.on("/timezones.json",    handleGetTimezonesJson);
     server.on("/displayModes.json", handleGetDisplayModesJson);
     server.on("/dateFormats.json",  handleGetDateFormatsJson);
@@ -247,6 +248,61 @@ void handlePostConfigJson()
         delay(1000);
         ESP.restart();
     }
+}
+
+
+void handleStatusJson()
+{
+    Serial.println("Web GET handleStatusJson");
+
+    DynamicJsonDocument doc(2048);
+
+    doc["SSID"] = WiFi.SSID();
+    doc["IP"]   = WiFi.localIP();
+    doc["RSSI"] = WiFi.RSSI();
+
+    char NTPbuffer[80];
+    if (!updatedByNTP)
+    {
+        sprintf(NTPbuffer, "never");
+    }
+    else
+    {
+        unsigned long secondsSinceNTP = (millis() - last_NTP_Update) / 1000;
+        unsigned long minutesSinceNTP = secondsSinceNTP / 60;
+        unsigned long hoursSinceNTP   = minutesSinceNTP / 60;
+        unsigned long daysSinceNTP    = hoursSinceNTP   / 24;
+        secondsSinceNTP %= 60;
+        minutesSinceNTP %= 60;
+        hoursSinceNTP   %= 24;
+        if (daysSinceNTP > 0)
+        {
+            sprintf(NTPbuffer, "%u dy, %u hr, %u min, %u sec",
+                    (unsigned int)daysSinceNTP, (unsigned int)hoursSinceNTP, (unsigned int)minutesSinceNTP, (unsigned int)secondsSinceNTP);
+        }
+        else if (hoursSinceNTP > 0)
+        {
+            sprintf(NTPbuffer, "%u hr, %u min, %u sec",
+                    (unsigned int)hoursSinceNTP, (unsigned int)minutesSinceNTP, (unsigned int)secondsSinceNTP);
+        }
+        else if (minutesSinceNTP > 0)
+        {
+            sprintf(NTPbuffer, "%u min, %u sec",
+                    (unsigned int)minutesSinceNTP, (unsigned int)secondsSinceNTP);
+        }
+        else
+        {
+            sprintf(NTPbuffer, "%u sec",
+                    (unsigned int)secondsSinceNTP);
+        }
+    }
+    doc["NTP"] = NTPbuffer;
+
+    String buffer;
+    serializeJson(doc, buffer);
+    server.sendHeader("Cache-Control", "no-cache");
+    server.sendHeader("X-Content-Type-Options", "nosniff");
+    server.send(200, "application/json; charset=utf-8", buffer);
 }
 
 

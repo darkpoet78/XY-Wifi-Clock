@@ -56,6 +56,7 @@ int AM_PM_values[9] =
 };
 
 bool hasNetworkConnection = false;
+bool updatedByNTP = false;
 unsigned long last_NTP_Update = 0 - TIME_UPDATE_INTERVAL;
 WiFiManager wifiManager;
 
@@ -733,7 +734,7 @@ void loop()
     }
 
     int red_LED_state = LOW;
-    if ((millis() - last_NTP_Update) > TIME_UPDATE_INTERVAL)
+    if (!updatedByNTP  ||  ((millis() - last_NTP_Update) > TIME_UPDATE_INTERVAL))
     {
         if ((currentSecond & 0x01) != 0)
         {
@@ -799,6 +800,7 @@ void timeUpdate()
 
     DS1307_WriteTime();
 
+    updatedByNTP    = true;
     last_NTP_Update = millis();
 }
 

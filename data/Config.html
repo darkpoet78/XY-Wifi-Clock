@@ -12,10 +12,14 @@
 
    <style>
        body { font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }
-       label { width:180px; display: inline-block; }
-       th { font-weight: bold; }
-       td { text-align: center; }
-       button { cursor: pointer; background-color: #e1ecf4; border-radius: 3px; color: #2c5777; border: 1px solid #7aa7c7; box-sizing: border-box; padding: 8px 12px; }
+	   label { font-size: 14px; font-weight: normal; width:180px; display: inline-block; }
+	   span {font-size: 14px; font-weight: normal; }
+	   th { font-size: 14px; font-weight: bold; }
+       td { font-size: 14px; text-align: center; }
+       button { font-size: 14px; font-weight: bold; cursor: pointer; background-color: #e1ecf4; border-radius: 3px; color: #2c5777; border: 1px solid #7aa7c7; box-sizing: border-box; padding: 8px 12px; }
+	   fieldset {font-size: 20px; font-weight: bold; display: inline-block; }
+	   h1 {font-size: 26px;}
+	   h3 {font-size: 16px;}
    </style>
 
    <script>
@@ -41,81 +45,110 @@
 <h1>XY-Wifi Clock</h1>
 
 <form>
-   <label for="deviceName">Device Name</label>
-   <input type="text" id="deviceName" name="deviceName" maxlength="15"/><br/><br/>
+   <fieldset>
+	  <legend>Status</legend>
 
-   <label for="timezone">Timezone</label>
-   <select id="timezone" name="timezone"></select><br/><br/>
+	  <br/>
 
-   <label for="displayMode">Time Format</label>
-   <select id="displayMode" name="displayMode"></select><br/><br/>
+	  <label for="SSID">SSID</label>
+	  <input type="text" id="SSID" name="SSID" readonly><br/><br/>
 
-   <label for="dateFormat">Date Format</label>
-   <select id="dateFormat" name="dateFormat"></select><br/><br/>
+	  <label for="IP">IP Address</label>
+	  <input type="text" id="IP" name="IP" readonly><br/><br/>
 
-   <label for="alarmSound">Alarm Sound</label>
-   <select id="alarmSound" name="alarmSound"></select><br/><br/>
+	  <label for="RSSI">RSSI in dBm</label>
+	  <input type="text" id="RSSI" name="RSSI" readonly><br/><br/>
 
-   <label for="autoBrightness">Auto-Brightness Enable</label>
-   <input id="autoBrightness" name="autoBrightness" type="checkbox"><br/><br/>
+	  <label for="NTP">Last NTP Update</label>
+	  <input type="text" id="NTP" name="NTP" readonly><br/><br/>
+   </fieldset>
 
-   <br/>
-   <h3>Auto-Brightness Settings</h3>
-   <div id="day-brightness-section">
-      <label for="day-start" style="width: 95px">Day Start</label>
-      <select id="day-start" class="hour"></select>
-      &emsp;<select class="minute"></select>
-      &emsp;<select class="AmPm"></select>
-      <span style="padding-left: 40px">Dim <input id="day-start-brightness" class="brightness" type="range" min="1" max="8" value="4"/> Bright</span>
-   </div>
-   <div id="night-brightness-section">
-      <label for="night-start" style="width: 95px">Night Start</label>
-      <select id="night-start" class="hour"></select>
-      &emsp;<select class="minute"></select>
-      &emsp;<select class="AmPm"></select>
-      <span style="padding-left: 40px">Dim <input id="night-start-brightness" class="brightness" type="range" min="1" max="8" value="4"/> Bright</span>
-   </div>
    <br/><br/>
 
-   <h3>Alarms</h3>
-   <table id="alarms-table">
-      <thead>
-         <tr>
-            <th>Enable</th>
-            <th style="padding-left: 40px">Hour</th>
-            <th style="padding-left: 15px">Min</th>
-            <th style="padding-left: 15px">AM/PM</th>
-            <th style="padding-left: 20px">Mon</th>
-            <th style="padding-left: 5px">Tue</th>
-            <th style="padding-left: 5px">Wed</th>
-            <th style="padding-left: 5px">Thu</th>
-            <th style="padding-left: 5px">Fri</th>
-            <th style="padding-left: 5px">Sat</th>
-            <th style="padding-left: 5px">Sun</th>
-         </tr>
-      </thead>
-      <tbody>
-         <tr>
-            <td><input  class="enable" type="checkbox"></td>
-            <td style="padding-left: 40px"><select class="hour"></select></td>
-            <td style="padding-left: 15px"><select class="minute"></select></td>
-            <td style="padding-left: 15px"><select class="AmPm"></select></td>
-            <td style="padding-left: 20px"><input  class="mon" type="checkbox"></td>
-            <td style="padding-left: 5px"><input  class="tue" type="checkbox"></td>
-            <td style="padding-left: 5px"><input  class="wed" type="checkbox"></td>
-            <td style="padding-left: 5px"><input  class="thu" type="checkbox"></td>
-            <td style="padding-left: 5px"><input  class="fri" type="checkbox"></td>
-            <td style="padding-left: 5px"><input  class="sat" type="checkbox"></td>
-            <td style="padding-left: 5px"><input  class="sun" type="checkbox"></td>
-         </tr>
-      </tbody>
-   </table>
-   <br/><br/>
+   <fieldset>
+	  <legend>Config</legend>
 
-   <br/>
-   <div style="width:540px; text-align: center">
-      <button id="save" type="button">Save</button>
-   </div>
+
+	  <h3>General (change causes restart)</h3>
+	  <label for="deviceName">Device Name</label>
+	  <input type="text" id="deviceName" name="deviceName" maxlength="15"/><br/><br/>
+
+	  <label for="timezone">Timezone</label>
+	  <select id="timezone" name="timezone"></select><br/><br/>
+
+
+	  <h3>General (no restart on change)</h3>
+	  <label for="displayMode">Time Format</label>
+	  <select id="displayMode" name="displayMode"></select><br/><br/>
+
+	  <label for="dateFormat">Date Format</label>
+	  <select id="dateFormat" name="dateFormat"></select><br/><br/>
+
+	  <label for="alarmSound">Alarm Sound</label>
+	  <select id="alarmSound" name="alarmSound"></select><br/><br/>
+
+
+	  <h3>Auto-Brightness Settings (no restart on change)</h3>
+	  <label for="autoBrightness">Auto-Brightness Enable</label>
+	  <input id="autoBrightness" name="autoBrightness" type="checkbox"><br/><br/>
+
+	  <div id="day-brightness-section">
+		 <label for="day-start" style="width: 95px">Day Start</label>
+		 <select id="day-start" class="hour"></select>
+		 &emsp;<select class="minute"></select>
+		 &emsp;<select class="AmPm"></select>
+		 <span style="padding-left: 40px">Dim <input id="day-start-brightness" class="brightness" type="range" min="1" max="8" value="4"/> Bright</span>
+	  </div>
+	  <div id="night-brightness-section">
+		 <label for="night-start" style="width: 95px">Night Start</label>
+		 <select id="night-start" class="hour"></select>
+		 &emsp;<select class="minute"></select>
+		 &emsp;<select class="AmPm"></select>
+		 <span style="padding-left: 40px">Dim <input id="night-start-brightness" class="brightness" type="range" min="1" max="8" value="4"/> Bright</span>
+	  </div>
+	  <br/>
+
+
+	  <h3>Alarms (no restart on change)</h3>
+	  <table id="alarms-table">
+		 <thead>
+			<tr>
+			   <th>Enable</th>
+			   <th style="padding-left: 40px">Hour</th>
+			   <th style="padding-left: 15px">Min</th>
+			   <th style="padding-left: 15px">AM/PM</th>
+			   <th style="padding-left: 20px">Mon</th>
+			   <th style="padding-left: 5px">Tue</th>
+			   <th style="padding-left: 5px">Wed</th>
+			   <th style="padding-left: 5px">Thu</th>
+			   <th style="padding-left: 5px">Fri</th>
+			   <th style="padding-left: 5px">Sat</th>
+			   <th style="padding-left: 5px">Sun</th>
+			</tr>
+		 </thead>
+		 <tbody>
+			<tr>
+			   <td><input  class="enable" type="checkbox"></td>
+			   <td style="padding-left: 40px"><select class="hour"></select></td>
+			   <td style="padding-left: 15px"><select class="minute"></select></td>
+			   <td style="padding-left: 15px"><select class="AmPm"></select></td>
+			   <td style="padding-left: 20px"><input  class="mon" type="checkbox"></td>
+			   <td style="padding-left: 5px"><input  class="tue" type="checkbox"></td>
+			   <td style="padding-left: 5px"><input  class="wed" type="checkbox"></td>
+			   <td style="padding-left: 5px"><input  class="thu" type="checkbox"></td>
+			   <td style="padding-left: 5px"><input  class="fri" type="checkbox"></td>
+			   <td style="padding-left: 5px"><input  class="sat" type="checkbox"></td>
+			   <td style="padding-left: 5px"><input  class="sun" type="checkbox"></td>
+			</tr>
+		 </tbody>
+	  </table>
+	  <br/>
+
+	  <br/>
+	  <div style="width:540px; text-align: center">
+		 <button id="save" type="button">Save</button>
+	  </div>
+   </fieldset>
 
 </form>
 
@@ -131,12 +164,21 @@
 
     var alarmSounds = [];
 
+	var statusUpdateInterval;
+
 
     function loadConfig()
     {
-        fetch("/config")
+        fetch("/config",
+		{
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        })
         .then(response => response.json())
-        .then(config => displayConfig(config));
+		.then(config => displayConfig(config));
+
+		loadStatus();
+		statusUpdateInterval = setInterval(loadStatus, 1000);
     }
 
 
@@ -183,6 +225,27 @@
             }
         }
     }
+
+
+    function loadStatus()
+    {
+		fetch("/status",
+		{
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(status => displayStatus(status));
+    }
+
+
+    function displayStatus(status)
+    {
+        document.getElementById("SSID").value = status.SSID;
+        document.getElementById("IP").value	  = status.IP;
+        document.getElementById("RSSI").value = status.RSSI;
+        document.getElementById("NTP").value  = status.NTP;
+	}
 
 
     function setBrightness(brightnessSection, brightnessConfig)
@@ -256,14 +319,23 @@
 
         document.getElementById("save").innerHTML = "Saving...";
 
+		clearInterval(statusUpdateInterval);
+
         return fetch("/config",
         {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: json
         })
-        .then(() => document.getElementById("save").innerHTML = "Save");
-    }
+		.then(() => setTimeout(saveDone, 2000));
+	}
+
+
+	function saveDone()
+	{
+		document.getElementById("save").innerHTML = "Save";
+		statusUpdateInterval = setInterval(loadStatus, 1000);
+	}
 
 
     function isTimeFormat24(format)
