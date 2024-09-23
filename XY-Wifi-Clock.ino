@@ -80,7 +80,7 @@ unsigned long hotspotOpenTime = 0;
 #define MAX_BRIGHTNESS       8
 uint8_t currentBrightness  = 0;     // current display brightness
 uint8_t lastAutoBrightness = 0;     // last brightness set by auto day/night settings
-uint8_t manualBrightness   = 4;     // brightness set by pushbutton
+uint8_t manualBrightness   = 4;     // brightness set by pushbutton or web page slider
 
 bool isSpiffsStarted = false;
 

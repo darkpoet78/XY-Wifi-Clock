@@ -8,6 +8,8 @@ void startWebServer()
     server.on("/",                  handleRoot);
     server.on("/config",            handleConfigJson);
     server.on("/status",            handleStatusJson);
+    server.on("/brightness",        handleBrightnessJson);
+    server.on("/debug",             hanndleDebugText);
     server.on("/timezones.json",    handleGetTimezonesJson);
     server.on("/displayModes.json", handleGetDisplayModesJson);
     server.on("/dateFormats.json",  handleGetDateFormatsJson);
@@ -156,7 +158,7 @@ void handleConfigJson()
 
 void handleGetConfigJson()
 {
-    Serial.println("Web GET handleConfigJson");
+    Serial.println("Web handleGetConfigJson");
 
     DynamicJsonDocument doc = convertConfigToJson();
 
@@ -170,7 +172,7 @@ void handleGetConfigJson()
 
 void handlePostConfigJson()
 {
-    Serial.println("Web POST handleConfigJson");
+    Serial.println("Web handlePostConfigJson");
 
     String previousDeviceName     = config.getDeviceName();
     String previousTimezone       = config.getTimezone();
@@ -253,12 +255,12 @@ void handlePostConfigJson()
 
 void handleStatusJson()
 {
-    Serial.println("Web GET handleStatusJson");
+    Serial.println("Web handleStatusJson");
 
     DynamicJsonDocument doc(2048);
 
     doc["SSID"] = WiFi.SSID();
-    doc["IP"]   = WiFi.localIP();
+    doc["IP"]   = WiFi.localIP().toString();
     doc["RSSI"] = WiFi.RSSI();
 
     char NTPbuffer[80];
@@ -298,6 +300,8 @@ void handleStatusJson()
     }
     doc["NTP"] = NTPbuffer;
 
+    doc["BRIGHTNESS"] = currentBrightness;
+
     String buffer;
     serializeJson(doc, buffer);
     server.sendHeader("Cache-Control", "no-cache");
@@ -306,38 +310,69 @@ void handleStatusJson()
 }
 
 
+void handleBrightnessJson()
+{
+    Serial.println("Web handleBrightnessJson");
+
+    DynamicJsonDocument json(128);
+
+    deserializeJson(json, server.arg("plain"));
+
+    uint8_t newBrightness = json["newBrightness"];
+    if ((newBrightness >= MIN_BRIGHTNESS)  &&  (newBrightness <= MAX_BRIGHTNESS))
+    {
+        manualBrightness = newBrightness;
+        setDisplayBrightness(manualBrightness, true);
+    }
+
+    server.sendHeader("Cache-Control", "no-cache");
+    server.sendHeader("X-Content-Type-Options", "nosniff");
+    server.send(200, "text/plain; charset=utf-8");
+}
+
+
+void hanndleDebugText()
+{
+    Serial.println(server.arg("plain"));
+
+    server.sendHeader("Cache-Control", "no-cache");
+    server.sendHeader("X-Content-Type-Options", "nosniff");
+    server.send(200, "text/plain; charset=utf-8");
+}
+
+
 void handleGetTimezonesJson()
 {
-    Serial.println("Web GET handleGetTimezonesJson");
+    Serial.println("Web handleGetTimezonesJson");
     handleFileRead("/timezones.json");
 }
 
 
 void handleGetDisplayModesJson()
 {
-    Serial.println("Web GET handleGetDisplayModesJson");
+    Serial.println("Web handleGetDisplayModesJson");
     handleFileRead("/displayModes.json");
 }
 
 
 void handleGetDateFormatsJson()
 {
-    Serial.println("Web GET handleGetDateFormatsJson");
+    Serial.println("Web handleGetDateFormatsJson");
     handleFileRead("/dateFormats.json");
-}
-
-
-void handleGetFavicon()
-{
-    Serial.println("Web GET handleGetFavicon");
-    handleFileRead("/favicon.ico");
 }
 
 
 void handleGetAlarmSoundsJson()
 {
-    Serial.println("Web GET handleGetAlarmSoundsJson");
+    Serial.println("Web handleGetAlarmSoundsJson");
     handleFileRead("/alarmSounds.json");
+}
+
+
+void handleGetFavicon()
+{
+    Serial.println("Web handleGetFavicon");
+    handleFileRead("/favicon.ico");
 }
 
 
