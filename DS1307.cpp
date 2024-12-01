@@ -151,8 +151,12 @@ void DS1307_Setup(int scl, int sda)
 }
 
 
-void DS1307_ReadTime()
+struct tm DS1307_ReadTime()
 {
+    // set defaults for return value
+    struct tm now;
+    memset(&now, 0, sizeof(now));
+
     // make sure DS1307_Setup() was called
     if ((clockPin == -1)  ||  (dataPin == -1))
     {
@@ -209,7 +213,6 @@ void DS1307_ReadTime()
         else
         {
             // convert from DS1307 format to struct tm format
-            struct tm now;
             now.tm_sec  = (10 * ((registers[0] & 0x70) >> 4)) + (registers[0] & 0x0F);
             now.tm_min  = (10 * ((registers[1] & 0x70) >> 4)) + (registers[1] & 0x0F);
             now.tm_hour = (10 * ((registers[2] & 0x30) >> 4)) + (registers[2] & 0x0F);
@@ -234,6 +237,8 @@ void DS1307_ReadTime()
             Serial.println(buffer);
         }
     }
+
+    return (now);
 }
 
 

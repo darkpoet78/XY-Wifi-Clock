@@ -67,6 +67,8 @@ uint8_t   currentSecond  = 0;
 uint8_t   currentWeekDay = 0;       // 1-7, 1 = Monday
 struct tm currentTimeInfo;
 
+String lastResetTime;               // date-time of last reset
+
 ESP8266WebServer server(80);
 
 bool isTextOnDisplay = false;
@@ -78,14 +80,15 @@ unsigned long hotspotOpenTime = 0;
 
 #define MIN_BRIGHTNESS       1
 #define MAX_BRIGHTNESS       8
-uint8_t currentBrightness  = 0;     // current display brightness
-uint8_t lastAutoBrightness = 0;     // last brightness set by auto day/night settings
-uint8_t manualBrightness   = 4;     // brightness set by pushbutton or web page slider
+uint8_t currentBrightness  = 0;                 // current display brightness
+uint8_t lastAutoBrightness = 0;                 // last brightness set by auto day/night settings
+uint8_t manualBrightness   = MIN_BRIGHTNESS;    // brightness set by pushbutton or web page slider
 
 bool isSpiffsStarted = false;
 
 bool buzzerOn = false;
 unsigned long buzzerStartTime;
+unsigned long snoozeStartTime;
 
 // prototype needed for class definition
 void ensureSpiffsStarted();
@@ -251,6 +254,8 @@ class Config
         String  dateFormat;
         int     dateFormatNumber;
         String  alarmSound;
+        String  snoozeTime;
+        int     snoozeTimeNumber;
         bool    autoBrightnessEnable;
 
     public:
@@ -383,6 +388,26 @@ class Config
             doc.garbageCollect();
 
             return (temp);
+        }
+
+        String getSnoozeTime()
+        {
+            return (snoozeTime);
+        }
+
+        void setSnoozeTime(String value)
+        {
+            snoozeTime = value;
+        }
+
+        int getSnoozeTimeNumber()
+        {
+            return (snoozeTimeNumber);
+        }
+
+        void setSnoozeTimeNumber(int value)
+        {
+            snoozeTimeNumber = value;
         }
 
         bool getAutoBrightnessEnable()
@@ -561,22 +586,8 @@ void setup()
     // DS1307 interface setup
     DS1307_Setup(SCL_PIN, SDA_PIN);
 
-    // setup timezone in our config data
-    String timezone = config.getTimezone();
-    if (!Timezones::isValidTimezone(timezone))
-    {
-        // if configured timezone is invalid, use GMT
-        timezone = "Etc/GMT";
-    }
-    config.setTimezone(timezone);
-
-    // get Posix timezone string, using data from https://github.com/nayarsystems/posix_tz_db
-    String posixTimezoneText = Timezones::getTimezonePosixText(timezone);
-    Serial.print("Timezone posix text: ");
-    Serial.println(posixTimezoneText);
-
-    // start NTP Time sync service
-    configTzTime(posixTimezoneText.c_str(), "pool.ntp.org", "time.nist.gov");
+    // setup timezone
+    setup_timezone();
 
     // try NTP if there is a network connection
     int timeout = 0;
@@ -628,13 +639,28 @@ void setup()
     if (timeout <= 0)
     {
         Serial.println("Trying to use DS1307 time...");
-        DS1307_ReadTime();
+        currentTimeInfo = DS1307_ReadTime();
     }
     else
     {
         // display update message
         timeUpdate();
     }
+
+    // save reset date-time
+    char tempBuffer[32];
+    switch (config.convertDisplayModeToNumber(config.getDisplayMode()))
+    {
+        case TIME_MODE_24_SOLID_COLON:
+        case TIME_MODE_24_BLINKING_COLON:
+            strftime(tempBuffer, sizeof(tempBuffer), "%d %b %Y, %H:%M:%S,\n", &currentTimeInfo);
+            break;
+
+        default:
+            strftime(tempBuffer, sizeof(tempBuffer), "%d %b %Y, %I:%M:%S %p,\n", &currentTimeInfo);
+            break;
+    }
+    lastResetTime = tempBuffer + config.getTimezone();
 
     // set NTP update callback
     settimeofday_cb(timeUpdate);
@@ -675,15 +701,38 @@ void setup()
         {
             Serial.printf("OTA Error[%u]: ", error);
             displaySomething("fail");
-            if (error == OTA_AUTH_ERROR) Serial.println("OTA Auth Failed");
-            else if (error == OTA_BEGIN_ERROR) Serial.println("OTA Begin Failed");
-            else if (error == OTA_CONNECT_ERROR) Serial.println("OTA Connect Failed");
-            else if (error == OTA_RECEIVE_ERROR) Serial.println("OTA Receive Failed");
-            else if (error == OTA_END_ERROR) Serial.println("OTA End Failed");
+            String error_message;
+            switch (error)
+            {
+                case OTA_AUTH_ERROR:
+                    error_message = "OTA auth failed";
+                    break;
+
+                case OTA_BEGIN_ERROR:
+                    error_message = "OTA begin failed";
+                    break;
+
+                case OTA_CONNECT_ERROR:
+                    error_message = "OTA connect failed";
+                    break;
+
+                case OTA_RECEIVE_ERROR:
+                    error_message = "OTA receive failed";
+                    break;
+
+                case OTA_END_ERROR:
+                    error_message = "OTA end failed";
+                    break;
+
+                default:
+                    error_message = "Unknown OTA error";
+                    break;
+            }
+            Serial.println(error_message);
         });
         ArduinoOTA.begin();
 
-        // Display IP Address - uncomment if you want to see the IP at boot
+        // display IP address - uncomment if you want to see the IP at boot
         // displayIpAddress();
 
         startWebServer();
@@ -748,30 +797,59 @@ void loop()
     {
         static bool alreadyBuzzed = false;
 
-        if ((currentSecond & 0x01) != 0)
+        if (isSnoozeActive())
         {
-            if (!alreadyBuzzed)
-            {
-                beep(NOTE_C5, 100);
-                yield();
-                delay(200);
-                beep(NOTE_C5, 100);
-                yield();
-                alreadyBuzzed = true;
-            }
+            buzzerStartTime = millis();
         }
         else
         {
-            alreadyBuzzed = false;
-        }
+            if ((currentSecond & 0x01) != 0)
+            {
+                if (!alreadyBuzzed)
+                {
+                    beep(NOTE_C5, 100);
+                    delay(100);
+                    beep(NOTE_C5, 100);
+                    yield();
+                    alreadyBuzzed = true;
+                }
+            }
+            else
+            {
+                alreadyBuzzed = false;
+            }
 
-        // turn off buzzer if maximum time has been reached
-        if ((millis() - buzzerStartTime) >= MAXIMUM_BUZZER_TIME)
-        {
-            buzzerOn = false;
+            // turn off buzzer if maximum time has been reached
+            if ((millis() - buzzerStartTime) >= MAXIMUM_BUZZER_TIME)
+            {
+                buzzerOn = false;
+                displayScrollingText("AL off");
+            }
         }
     }
     yield();
+}
+
+
+// setup (or change) timezone
+void setup_timezone()
+{
+    // validate timezone in config data
+    String timezone = config.getTimezone();
+    if (!Timezones::isValidTimezone(timezone))
+    {
+        // if configured timezone is invalid, use GMT
+        timezone = "Etc/GMT";
+    }
+    config.setTimezone(timezone);
+
+    // get Posix timezone string, using data from https://github.com/nayarsystems/posix_tz_db
+    String posixTimezoneText = Timezones::getTimezonePosixText(timezone);
+    Serial.print("Timezone posix text: ");
+    Serial.println(posixTimezoneText);
+
+    // start NTP Time sync service
+    configTzTime(posixTimezoneText.c_str(), "pool.ntp.org", "time.nist.gov");
 }
 
 
@@ -853,6 +931,8 @@ void updateDataFromConfig()
             break;
     }
     config.setDateFormatNumber(temp);
+
+    config.setSnoozeTimeNumber(config.getSnoozeTime().toInt());
 
     updateCurrentTime();
     if (!checkAutoBrightness())
@@ -1177,6 +1257,14 @@ void checkAlarms()
 }
 
 
+// check if snooze is active
+bool isSnoozeActive()
+{
+    bool bSnooze = ((millis() - snoozeStartTime) < (60u * 1000u * (unsigned long)config.getSnoozeTimeNumber()));
+    return (bSnooze);
+}
+
+
 // update the current time
 void updateCurrentTime()
 {
@@ -1218,9 +1306,13 @@ void click(Button2& btn)
     }
     else if (btn == buttonKey)
     {
-        // turn off buzzer
+        // snooze buzzer if needed
         Serial.println("Key button clicked");
-        buzzerOn = false;
+        if (buzzerOn  &&  !isSnoozeActive())
+        {
+            snoozeStartTime = millis();
+            displayScrollingText("SNOOZE");
+        }
     }
 }
 
@@ -1292,15 +1384,23 @@ void longClick(Button2& btn)
     {
         if (timeBtn > BUTTON_LONG_PRESS)
         {
-            // turn off buzzer
+            // turn off buzzer if needed
             Serial.println("Key button long-pressed");
-            buzzerOn = false;
+            if (buzzerOn)
+            {
+                buzzerOn = false;
+                displayScrollingText("AL off");
+            }
         }
         else
         {
-            // turn off buzzer
+            // snooze buzzer if needed
             Serial.println("Key button short-pressed");
-            buzzerOn = false;
+            if (buzzerOn  &&  !isSnoozeActive())
+            {
+                snoozeStartTime = millis();
+                displayScrollingText("SNOOZE");
+            }
         }
     }
 }
@@ -1643,6 +1743,7 @@ void soundAlarm(int alarmSoundNumber)
         case ALARM_SOUND_BUZZER:
             buzzerOn = true;
             buzzerStartTime = millis();
+            snoozeStartTime = buzzerStartTime - (60u * 1000u * (unsigned long)config.getSnoozeTimeNumber());
             break;
 
         case ALARM_SOUND_IMPERIAL_MARCH:

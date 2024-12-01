@@ -10,6 +10,7 @@ void startWebServer()
     server.on("/status",            handleStatusJson);
     server.on("/brightness",        handleBrightnessJson);
     server.on("/debug",             hanndleDebugText);
+    server.on("/reset",             handleReset);
     server.on("/timezones.json",    handleGetTimezonesJson);
     server.on("/displayModes.json", handleGetDisplayModesJson);
     server.on("/dateFormats.json",  handleGetDateFormatsJson);
@@ -179,6 +180,7 @@ void handlePostConfigJson()
     String previousDisplayMode    = config.getDisplayMode();
     String previousDateFormat     = config.getDateFormat();
     String previousAlarmSound     = config.getAlarmSound();
+    String previousSnoozeTime     = config.getSnoozeTime();
     bool   previousAutoBrightness = config.getAutoBrightnessEnable();
 
     DynamicJsonDocument json(2048);
@@ -197,26 +199,26 @@ void handlePostConfigJson()
     String displayMode    = config.getDisplayMode();
     String dateFormat     = config.getDateFormat();
     String alarmSound     = config.getAlarmSound();
+    String snoozeTime     = config.getSnoozeTime();
     bool   autoBrightness = config.getAutoBrightnessEnable();
 
     server.sendHeader("Cache-Control", "no-cache");
     server.sendHeader("X-Content-Type-Options", "nosniff");
     server.send(200, "text/plain; charset=utf-8");
 
-    bool needReset = false;
-
     if (!deviceName.equalsIgnoreCase(previousDeviceName))
     {
         Serial.print("Device Name changed to: ");
         Serial.println(deviceName);
-        needReset = true;
+        MDNS.setHostname(deviceName);
+        ArduinoOTA.setHostname(deviceName.c_str());
     }
 
     if (!timezone.equalsIgnoreCase(previousTimezone))
     {
         Serial.print("Timezone changed to: ");
         Serial.println(timezone);
-        needReset = true;
+        setup_timezone();
     }
 
     if (!displayMode.equalsIgnoreCase(previousDisplayMode))
@@ -238,17 +240,16 @@ void handlePostConfigJson()
         Serial.println(alarmSound);
     }
 
-    if (autoBrightness != previousAutoBrightness)
+    if (!snoozeTime.equalsIgnoreCase(previousSnoozeTime))
     {
-        Serial.print("Auto brightness changed to: ");
-        Serial.println(autoBrightness ? "enabled" : "disabled");
+        Serial.print("Snooze Time changed to: ");
+        Serial.println(snoozeTime);
     }
 
-    if (needReset)
+    if (autoBrightness != previousAutoBrightness)
     {
-        Serial.println("Config change(s) will trigger a device restart...");
-        delay(1000);
-        ESP.restart();
+        Serial.print("Auto Brightness changed to: ");
+        Serial.println(autoBrightness ? "enabled" : "disabled");
     }
 }
 
@@ -263,7 +264,7 @@ void handleStatusJson()
     doc["IP"]   = WiFi.localIP().toString();
     doc["RSSI"] = WiFi.RSSI();
 
-    char NTPbuffer[80];
+    char NTPbuffer[40];
     if (!updatedByNTP)
     {
         sprintf(NTPbuffer, "never");
@@ -302,8 +303,11 @@ void handleStatusJson()
 
     doc["BRIGHTNESS"] = currentBrightness;
 
+    doc["RESET"] = lastResetTime;
+
     String buffer;
     serializeJson(doc, buffer);
+
     server.sendHeader("Cache-Control", "no-cache");
     server.sendHeader("X-Content-Type-Options", "nosniff");
     server.send(200, "application/json; charset=utf-8", buffer);
@@ -338,6 +342,20 @@ void hanndleDebugText()
     server.sendHeader("Cache-Control", "no-cache");
     server.sendHeader("X-Content-Type-Options", "nosniff");
     server.send(200, "text/plain; charset=utf-8");
+}
+
+
+void handleReset()
+{
+    server.sendHeader("Cache-Control", "no-cache");
+    server.sendHeader("X-Content-Type-Options", "nosniff");
+    server.send(200, "text/plain; charset=utf-8");
+
+    if (server.arg("plain").equalsIgnoreCase("ResetNow"))
+    {
+        delay(500);
+        ESP.restart();
+    }
 }
 
 

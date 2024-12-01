@@ -20,6 +20,7 @@
 	   fieldset {font-size: 20px; font-weight: bold; display: inline-block; }
 	   h1 {font-size: 26px;}
 	   h3 {font-size: 16px;}
+	   textarea {resize: none; }
    </style>
 
    <script>
@@ -56,11 +57,14 @@
 	  <label for="IP">IP Address</label>
 	  <input type="text" id="IP" name="IP" readonly><br/><br/>
 
-	  <label for="RSSI">RSSI in dBm</label>
+	  <label for="RSSI">RSSI (dBm)</label>
 	  <input type="text" id="RSSI" name="RSSI" readonly><br/><br/>
 
 	  <label for="NTP">Last NTP Update</label>
 	  <input type="text" id="NTP" name="NTP" readonly><br/><br/>
+
+	  <label for="RESET" style="vertical-align: top" >Last Reset</label>
+	  <textarea id="RESET" name="RESET" cols="28" rows="2" readonly></textarea><br/><br/>
 
 	  <label for="BRIGHTNESS">Brightness</label>
 	  <span>Dim <input id="current_brightness" class="slider" type="range" min="1" max="8" value="4"/> Bright</span>
@@ -72,15 +76,13 @@
 	  <legend>Config</legend>
 
 
-	  <h3>General (change causes restart)</h3>
+	  <h3>General</h3>
 	  <label for="deviceName">Device Name</label>
 	  <input type="text" id="deviceName" name="deviceName" maxlength="15"/><br/><br/>
 
 	  <label for="timezone">Timezone</label>
 	  <select id="timezone" name="timezone"></select><br/><br/>
 
-
-	  <h3>General (no restart on change)</h3>
 	  <label for="displayMode">Time Format</label>
 	  <select id="displayMode" name="displayMode"></select><br/><br/>
 
@@ -90,8 +92,10 @@
 	  <label for="alarmSound">Alarm Sound</label>
 	  <select id="alarmSound" name="alarmSound"></select><br/><br/>
 
+	  <label for="snoozeTime">Snooze Time (minutes)</label>
+	  <select id="snoozeTime" name="snoozeTime"></select><br/><br/>
 
-	  <h3>Auto-Brightness Settings (no restart on change)</h3>
+	  <h3>Auto-Brightness Settings</h3>
 	  <label for="autoBrightness">Auto-Brightness Enable</label>
 	  <input id="autoBrightness" name="autoBrightness" type="checkbox"><br/><br/>
 
@@ -112,7 +116,7 @@
 	  <br/>
 
 
-	  <h3>Alarms (no restart on change)</h3>
+	  <h3>Alarms</h3>
 	  <table id="alarms-table">
 		 <thead>
 			<tr>
@@ -185,7 +189,7 @@
 	}
 
 
-	function loadConfig()
+	function loadConfig(firstTime)
 	{
 		fetch("/config",
 		{
@@ -193,23 +197,24 @@
 			headers: { 'Content-Type': 'application/json' }
 		})
 		.then(response => response.json())
-		.then(config => displayConfig(config));
-
-		loadStatus();
-		statusUpdateInterval = setInterval(loadStatus, 1000);
+		.then(config => displayConfig(config, firstTime));
 	}
 
 
-	function displayConfig(config)
+	function displayConfig(config, firstTime)
 	{
 		document.getElementById("deviceName").value		  = config.deviceName;
 		document.getElementById("timezone").value		  = config.timezone;
 		document.getElementById("displayMode").value	  = config.displayMode;
 		document.getElementById("dateFormat").value		  = config.dateFormat;
 		document.getElementById("alarmSound").value		  = config.alarmSound;
+		document.getElementById("snoozeTime").value       = config.snoozeTime;
 		document.getElementById("autoBrightness").checked = config.autoBrightness;
 
-		setupAlarms();
+		if (firstTime)
+		{
+			setupAlarms();
+		}
 
 		if (config.dayBrightness)
 		{
@@ -259,10 +264,11 @@
 
 	function displayStatus(status)
 	{
-		document.getElementById("SSID").value		= status.SSID;
-		document.getElementById("IP").value			= status.IP;
-		document.getElementById("RSSI").value		= status.RSSI;
-		document.getElementById("NTP").value		= status.NTP;
+		document.getElementById("SSID").value	= status.SSID;
+		document.getElementById("IP").value		= status.IP;
+		document.getElementById("RSSI").value	= status.RSSI;
+		document.getElementById("NTP").value	= status.NTP;
+		document.getElementById("RESET").value	= status.RESET;
 		document.querySelector(".slider").value = status.BRIGHTNESS;
 	}
 
@@ -294,6 +300,7 @@
 			displayMode: document.getElementById("displayMode").value,
 			dateFormat: document.getElementById("dateFormat").value,
 			alarmSound: document.getElementById("alarmSound").value,
+			snoozeTime:	document.getElementById("snoozeTime").value,
 			autoBrightness: document.getElementById("autoBrightness").checked,
 			dayBrightness:	 { hour: 0, minute: 0, brightness: 4 },
 			nightBrightness: { hour: 0, minute: 0, brightness: 4 },
@@ -331,6 +338,22 @@
 	}
 
 
+	function sendReset()
+	{
+		if (confirm("Reset the clock?"))
+		{
+			var bodyText = new String("ResetNow");
+
+			return fetch("/reset",
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'text/plain' },
+				body: bodyText
+			});
+		}
+	}
+
+
 	function saveConfig()
 	{
 		var data = getConfigFromForm();
@@ -353,6 +376,7 @@
 	function saveDone()
 	{
 		document.getElementById("save").innerHTML = "Save";
+		loadConfig(false);
 		statusUpdateInterval = setInterval(loadStatus, 1000);
 	}
 
@@ -701,6 +725,9 @@
 
 	function setupControlEvents()
 	{
+		var resetControl = document.getElementById("RESET");
+		resetControl.addEventListener("dblclick", sendReset);
+
 		var saveButton = document.getElementById("save");
 		saveButton.addEventListener("click", saveConfig);
 
@@ -812,6 +839,19 @@
 	}
 
 
+	function populateSnoozeTime(select)
+	{
+		for (var i = 1; i <= 15; i++)
+		{
+			var option	 = document.createElement("option");
+			option.value = i;
+			option.text	 = new String(i);
+
+			select.add(option);
+		}
+	}
+
+
 	function loadAlarmSounds()
 	{
 		return fetch("alarmSounds.json",
@@ -842,7 +882,9 @@
 					loadAlarmSounds()
 					.then (() =>
 					{
-						loadConfig();
+						populateSnoozeTime(document.getElementById("snoozeTime"));
+						loadConfig(true);
+						statusUpdateInterval = setInterval(loadStatus, 1000);
 					});
 				});
 			});

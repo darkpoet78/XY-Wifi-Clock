@@ -18,7 +18,8 @@ void loadSettings()
         config.setDisplayMode("12 hour with solid colon (PM LED)");
         config.setDateFormat("mm/dd/yyyy");
         config.setAlarmSound("buzzer");
-        config.setAutoBrightnessEnable(true);
+        config.setSnoozeTime("8");
+        config.setAutoBrightnessEnable(false);
 
         Serial.println("Failed to open config file for reading, using defaults");
         saveSettings();
@@ -45,6 +46,8 @@ void loadSettings()
     Serial.println(config.getDateFormat());
     Serial.print("Alarm Sound: ");
     Serial.println(config.getAlarmSound());
+    Serial.print("Snooze Time: ");
+    Serial.println(config.getSnoozeTime());
     Serial.print("Auto brightness: ");
     Serial.println(config.getAutoBrightnessEnable() ? "enabled" : "disabled");
 
@@ -62,6 +65,7 @@ void loadSettingsFromJson(DynamicJsonDocument json)
     config.setDisplayMode(json["displayMode"]);
     config.setDateFormat(json["dateFormat"]);
     config.setAlarmSound(json["alarmSound"]);
+    config.setSnoozeTime(json["snoozeTime"]);
     config.setAutoBrightnessEnable(json["autoBrightness"].as<bool>());
 
     // Set defaults
@@ -88,6 +92,11 @@ void loadSettingsFromJson(DynamicJsonDocument json)
     if (!config.getAlarmSound())
     {
         config.setAlarmSound("buzzer");
+    }
+
+    if (!config.getSnoozeTime())
+    {
+        config.setSnoozeTime("8");
     }
 
     if (json["dayBrightness"])
@@ -152,21 +161,22 @@ DynamicJsonDocument convertConfigToJson()
 
     DynamicJsonDocument doc(2048);
 
-    doc["deviceName"] = config.getDeviceName();
-    doc["timezone"] = config.getTimezone();
-    doc["displayMode"] = config.getDisplayMode();
-    doc["dateFormat"] = config.getDateFormat();
-    doc["alarmSound"] = config.getAlarmSound();
-    doc["autoBrightness"]= config.getAutoBrightnessEnable();
+    doc["deviceName"]     = config.getDeviceName();
+    doc["timezone"]       = config.getTimezone();
+    doc["displayMode"]    = config.getDisplayMode();
+    doc["dateFormat"]     = config.getDateFormat();
+    doc["alarmSound"]     = config.getAlarmSound();
+    doc["snoozeTime"]     = config.getSnoozeTime();
+    doc["autoBrightness"] = config.getAutoBrightnessEnable();
 
-    doc["dayBrightness"] = doc.createNestedObject();
-    doc["dayBrightness"]["hour"] = config.dayBrightnessAlarm->getHour();
-    doc["dayBrightness"]["minute"] = config.dayBrightnessAlarm->getMinute();
+    doc["dayBrightness"]               = doc.createNestedObject();
+    doc["dayBrightness"]["hour"]       = config.dayBrightnessAlarm->getHour();
+    doc["dayBrightness"]["minute"]     = config.dayBrightnessAlarm->getMinute();
     doc["dayBrightness"]["brightness"] = config.dayBrightnessAlarm->getBrightness();
 
-    doc["nightBrightness"] = doc.createNestedObject();
-    doc["nightBrightness"]["hour"] = config.nightBrightnessAlarm->getHour();
-    doc["nightBrightness"]["minute"] = config.nightBrightnessAlarm->getMinute();
+    doc["nightBrightness"]               = doc.createNestedObject();
+    doc["nightBrightness"]["hour"]       = config.nightBrightnessAlarm->getHour();
+    doc["nightBrightness"]["minute"]     = config.nightBrightnessAlarm->getMinute();
     doc["nightBrightness"]["brightness"] = config.nightBrightnessAlarm->getBrightness();
 
     JsonArray alarmsJson = doc.createNestedArray("alarms");
