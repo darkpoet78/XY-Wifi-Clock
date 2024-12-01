@@ -19,7 +19,7 @@ The main change is to enable use of the DS1307 real-time clock chip.  This allow
 Other changes are:
 * Add long-press functionality to the UP and DOWN buttons.  Long-pressing the UP button displays the current date. Long-pressing the DOWN button displays currently enabled alarms.  Alarms that will occur later today or tomorrow blink twice.
 * Use the two LEDs on the top of the clock board.  The blue LED indicates a successful connection to a Wifi network.  The red LED displays NTP connection status.  If a successful NTP time fetch has occurred, the LED will light continuously. If NTP is unavailable or has failed a periodic update, the LED will blink.
-* Add an alarm buzzer.  If selected on the config page, the buzzer will sound at the alarm time.  It will turn off if the web config page is fetched by a browser.  It will also turn off if an external alarm silence switch is installed.  The silence switch is a momentary normally open pushbutton that is connected between the KEY pad on the small 90 degree daughter board and ground.  Finally, the buzzer will turn off after a 5 minute timeout.
+* Add an alarm buzzer.  If selected on the config page, the buzzer will sound at the alarm time.  It will turn off if the web config page is fetched by a browser.  It will also turn off if an external alarm silence switch is installed.  The silence switch is a momentary normally open pushbutton that is connected between the KEY pad on the small 90 degree daughter board and ground.  Finally, the buzzer will turn off after a 5 minute timeout.  The alarm buzzer also has a snooze function when the external alarm silence switch is installed.  Short pressing the switch activates snooze.  Long pressing the switch turns off the alarm.  The snooze time is programmable from 1 to 15 minutes.
 * Add an external AM/PM LED.  The "dots" on the clock display aren't that great for displaying AM/PM, as talked about in the EdenRidgway project discussion. The rightmost dot would be ideal, but it doesn't appear to be connected on the PWB.  An external LED can be added between the PIN2 pad and ground.  The drive for the LED is one of the pulse-width modulated outputs of the ESP8285.  The duty cycle of the pulse is varied when the display brightness changes, so the external LED brightness varies.
 * The number of alarms was changed from 6 to 7 so as to be able to have a unique alarm for each day of the week.
 * The possible brightness levels was changed from 7 to 8.
@@ -33,7 +33,6 @@ One other change is to easily allow changing the Wifi connection.  If you hold t
 
 ## Possible Future Changes
 
- - [ ] Add a snooze alarm function
  - [ ] Support uploading of user defined alarm sounds
 
 
@@ -86,9 +85,6 @@ For now, this firmware requires that you add SPIFFs sketch data as a second step
 You will need the ESP8266 File System Uploader plugin for arduino IDE to upload the config web page to the device.  Get it here: https://github.com/esp8266/arduino-esp8266fs-plugin.  This plugin is only compatible with Legacy Arduino IDE 1.8 (not the newer 2).
 
 Once you have installed the plugin and restarted the IDE, open up the project and use the Tools -> ESP866 Sketch Data Upoad option to upload the data folder (including the Config.html) file.
-
-When this project is migrated to platform.io in the future we will use this approach: https://docs.platformio.org/en/latest/platforms/espressif8266.html#uploading-files-to-filesystem so this step will just be part of the standard build and deployment process.
-
 
 ### Arduino Libraries Used
 
